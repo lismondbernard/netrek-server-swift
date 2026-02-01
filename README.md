@@ -43,6 +43,16 @@ This does not use any Apple-specific frameworks.  It is developed on MacOS and r
 * Coups
 * War logic (you are always at war with other teams)
 
+### Local Network Discovery (Bonjour)
+
+The server automatically advertises itself on the local network using Bonjour (mDNS/DNS-SD) with the service type `_netrek._tcp` on port 2592. Clients that support Bonjour browsing can discover the server without needing to enter an IP address.
+
+To verify the service is advertising:
+```bash
+dns-sd -B _netrek._tcp
+dns-sd -L "Netrek" _netrek._tcp
+```
+
 ### Supported, but everything needs more testing:
 
 * IPv6 (and IPv4) TCP Sockets!
