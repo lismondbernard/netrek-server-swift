@@ -136,6 +136,7 @@ class Universe {
     let tModeThreshold = 6
         
     var metaserver: MetaserverUDP? = nil
+    var bonjourAdvertiser: BonjourAdvertiser?
 
     //https://stackoverflow.com/questions/8304702/how-do-i-create-a-nstimer-on-a-background-thread
     /*func scheduleTimerInBackgroundThread(){
@@ -211,6 +212,9 @@ class Universe {
             //cannot log here
             print("No metaserver specified on CLI: skipping metaserver reports")
         }
+        let advertiser = BonjourAdvertiser()
+        advertiser.start(port: UInt16(Globals.PORT))
+        self.bonjourAdvertiser = advertiser
         logger.info("scheduling timer")
     }
     
