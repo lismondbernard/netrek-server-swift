@@ -55,6 +55,8 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 
 
+lifecycle.registerShutdown(label: "bonjour", .sync({ universe.bonjourAdvertiser?.stop() }))
+
 lifecycle.registerShutdown(label: "eventLoopGroup", .sync(group.syncShutdownGracefully))
 
 
