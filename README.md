@@ -45,7 +45,7 @@ This does not use any Apple-specific frameworks.  It is developed on MacOS and r
 
 ### Local Network Discovery (Bonjour)
 
-The server automatically advertises itself on the local network using Bonjour (mDNS/DNS-SD) with the service type `_netrek._tcp` on port 2592. Clients that support Bonjour browsing can discover the server without needing to enter an IP address.
+On macOS, the server advertises itself on the local network using Bonjour (mDNS/DNS-SD) with the service type `_netrek._tcp` on port 2592. Clients that support Bonjour browsing can discover the server without needing to enter an IP address. On Linux, where Bonjour is not available, the server skips this and runs as before.
 
 To verify the service is advertising:
 ```bash
