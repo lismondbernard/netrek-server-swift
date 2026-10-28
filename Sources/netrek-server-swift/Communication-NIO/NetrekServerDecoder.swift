@@ -121,9 +121,6 @@ final class NetrekServerDecoder: ByteToMessageDecoder {
                 var crashme: Double = Double.random(in: -5 ..< 5)
                 let crash = UInt32(crashme)
             }*/
-            if messageString == "reset34223" {
-                universe.empireReset()
-            }
             
             
             logger.debug("Received CP_MESSAGE 1 to group \(group) indiv \(indiv) message \(messageString) from \(sender.slot)")
