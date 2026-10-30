@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.5
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -30,6 +30,11 @@ let package = Package(
             .product(name: "LifecycleNIOCompat", package: "swift-service-lifecycle"),
             .product(name: "Crypto", package: "swift-crypto"),
             .product(name: "Backtrace", package: "swift-backtrace"),
+        ]),
+        .testTarget(name: "netrek-server-swiftTests", dependencies: [
+            "netrek-server-swift",
+            .product(name: "NIO", package: "swift-nio"),
+            .product(name: "NIOEmbedded", package: "swift-nio"),
         ]),
     ]
 )

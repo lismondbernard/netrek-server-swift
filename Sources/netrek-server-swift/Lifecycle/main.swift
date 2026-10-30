@@ -18,7 +18,7 @@ print("Initializing server")
 let netrekOptions = NetrekOptions.parseOrExit()
 
 LoggingSystem.bootstrap(NetrekLogHandler.init)
-let logger = Logger(label: "net.networkmom.netrek-server-swift")
+// `logger` is declared in Globals.swift. It is created on first use, which is the line below.
 
 let lifecycleConfiguration = ServiceLifecycle.Configuration(logger: logger)
 
