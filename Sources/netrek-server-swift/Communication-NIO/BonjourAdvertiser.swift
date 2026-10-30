@@ -15,7 +15,6 @@ import dnssd
 #endif
 
 class BonjourAdvertiser {
-    private let logger = Logger(label: "BonjourAdvertiser")
 
     #if canImport(dnssd)
     private var serviceRef: DNSServiceRef?
