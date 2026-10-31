@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.32.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.2.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "1.0.0-alpha"),
@@ -22,7 +22,7 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-backtrace.git", from: "1.2.0"),
     ],
     targets: [
-        .target(name: "netrek-server-swift", dependencies: [
+        .executableTarget(name: "netrek-server-swift", dependencies: [
             .product(name: "Logging",package: "swift-log"),
             .product(name: "NIO", package: "swift-nio"),
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
