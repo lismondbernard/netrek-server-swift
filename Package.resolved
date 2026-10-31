@@ -2,6 +2,15 @@
   "object": {
     "pins": [
       {
+        "package": "NetrekProtocol",
+        "repositoryURL": "https://github.com/lismondbernard/NetrekProtocol.git",
+        "state": {
+          "branch": null,
+          "revision": "59d1a8e2d8880ed4afaf1d7f84c9320b0c4131ee",
+          "version": "0.2.0"
+        }
+      },
+      {
         "package": "swift-argument-parser",
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
