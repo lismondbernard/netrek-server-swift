@@ -167,7 +167,7 @@ struct SP_LASER {
         if let target = laser.target {
             self.target = UInt32(target).byteSwapped
         } else {
-            self.target = 255
+            self.target = UInt32(255).byteSwapped
         }
     }
     var size: Int {
@@ -439,13 +439,13 @@ struct SP_LOGIN {
     UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,
     UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,
     UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,
-    UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8) =
+    UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8,UInt8) =
     (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-     0,0,0,0,0,0,0,0)
+     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
 
     init(success: Bool) {
         if success {

@@ -31,6 +31,37 @@ final class NetrekServerDecoderTests: XCTestCase {
         XCTAssertEqual(PACKET_SIZES[8], 52) // CP_LOGIN
     }
 
+    func testPacketSizesForScanPlanetAndFeature() {
+        XCTAssertEqual(PACKET_SIZES[34], 4)  // CP_SCAN, packets.h scan_cpacket
+        XCTAssertEqual(PACKET_SIZES[38], 12) // CP_PLANET, packets.h planet_cpacket
+        XCTAssertEqual(PACKET_SIZES[60], 88) // CP_FEATURE
+    }
+
+    func testTruncatedScanWaitsForMoreData() throws {
+        // Without an entry for type 34 the decoder threw invalidPacket here.
+        XCTAssertNoThrow(try channel.writeInbound(buffer([34, 0, 0])))
+        XCTAssertNil(try channel.readInbound(as: ByteBuffer.self))
+    }
+
+    func testScanFollowedByAnotherPacketIsFramedAsTwoPackets() {
+        // A complete CP_SCAN would reach `universe`, which main.swift creates
+        // and which does not exist under test (see the note above). So this
+        // walks the buffer with the same table the decoder frames by.
+        let bytes: [UInt8] = [34, 5, 0, 0,   2, 9, 0, 0]
+        var index = 0
+        var lengths: [Int] = []
+        while index < bytes.count {
+            guard let length = PACKET_SIZES[Int(bytes[index])], length > 0 else {
+                XCTFail("lost framing at byte \(index)")
+                return
+            }
+            lengths.append(length)
+            index += length
+        }
+        XCTAssertEqual(lengths, [4, 4])
+        XCTAssertEqual(index, bytes.count)
+    }
+
     func testUnknownPacketTypeIsRejected() {
         XCTAssertNil(PACKET_SIZES[255])
         XCTAssertThrowsError(try channel.writeInbound(buffer([255, 0, 0, 0]))) { error in
