@@ -7,6 +7,13 @@
 // 
 
 import Foundation
+import Logging
+
+// Declared here rather than in main.swift so that code in this module can be
+// tested: globals in main.swift are only initialised when main.swift runs.
+// Swift creates this one on first use. In the server that is right after
+// LoggingSystem.bootstrap in main.swift, so it picks up NetrekLogHandler.
+let logger = Logger(label: "net.networkmom.netrek-server-swift")
 
 struct Globals {
     static let PORT = 2592
