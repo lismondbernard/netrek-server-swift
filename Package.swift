@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "netrek-server-swift",
     platforms: [
-        .macOS(.v10_15)
+        .macOS(.v12)
     ],
     products: [
 	.executable(name: "netrek-server-swift", targets: ["netrek-server-swift"]),
@@ -20,6 +20,8 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "1.0.0-alpha"),
         .package(url: "https://github.com/apple/swift-crypto", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-backtrace.git", from: "1.2.0"),
+        // Used by the tests only, to catch this copy of the packet code drifting from NetrekWire.
+        .package(url: "https://github.com/lismondbernard/NetrekProtocol.git", from: "0.2.0"),
     ],
     targets: [
         .executableTarget(name: "netrek-server-swift", dependencies: [
@@ -35,6 +37,7 @@ let package = Package(
             "netrek-server-swift",
             .product(name: "NIO", package: "swift-nio"),
             .product(name: "NIOEmbedded", package: "swift-nio"),
+            .product(name: "NetrekWire", package: "NetrekProtocol"),
         ]),
     ]
 )
