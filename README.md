@@ -45,7 +45,9 @@ The binary is large (about 95 MB) because it includes the Swift runtime. It stil
 
 ### Things to know before you run it
 
-* The server listens on `::` (IPv6) port 2592. The host must have IPv6 enabled. On a kernel with IPv6 switched off the server stops at start-up with `SocketAddressError.unknown(host: "::", port: 2592)`. Whether IPv4 clients can use that same socket depends on your system's `net.ipv6.bindv6only` setting (the Linux default is to allow it). That part has not been tested here.
+* The server listens on port 2592. By default it listens on `::`, which means every IPv6 address and, on Linux, every IPv4 address too (see below). To choose the address yourself, pass `--listen-address`, for example `--listen-address 0.0.0.0` for IPv4 only.
+* If the host has no IPv6 (for example a DigitalOcean droplet created without "Enable IPv6"), listening on `::` can fail. When that happens with the default address, the server prints one line saying so and listens on `0.0.0.0` (IPv4 only) instead. An address you pass with `--listen-address` is used as is: if it fails, the server prints why and stops, with no fallback.
+* IPv4 clients reach the `::` socket as long as `net.ipv6.bindv6only` is 0, which is the Linux default (check with `sysctl net.ipv6.bindv6only`). They then show up in the logs as `::ffff:` addresses. If your system sets it to 1, pass `--listen-address 0.0.0.0` or the server will only take IPv6 clients. This has not been tested on a host with IPv6 yet.
 * `--directory` must be an existing parent. The server creates the directory it is given, but not its parents. The default is `/tmp/netrek`. For a real server use something that survives a reboot, such as `/var/lib/netrek`.
 * The `log.*` files in that directory are deleted and started again every time the server starts.
 * The user database (`netrek.database`) is saved when the server gets SIGTERM or SIGINT (for example `systemctl stop`).

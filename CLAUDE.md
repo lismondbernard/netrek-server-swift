@@ -27,6 +27,7 @@ swift test
 - `--directory <path>`: Directory for logs and user database (default: /tmp/netrek)
 - `--debug`: Enable debug logging (fills disk quickly)
 - `--game-style <bronco|empire>`: Game mode (default: empire)
+- `--listen-address <address>`: Address to listen on (default: `::`, falling back to `0.0.0.0` if the host has no IPv6)
 
 Server runs on port 2592 (hardcoded in `Globals.swift`).
 
