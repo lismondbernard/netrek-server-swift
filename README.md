@@ -61,9 +61,9 @@ To check a release binary instead of the debug one, also set `NETREK_SERVER_BINA
 * The user database (`netrek.database`) is saved when the server gets SIGTERM or SIGINT (for example `systemctl stop`).
 * Bonjour is not available on Linux. The server logs that and carries on.
 
-### Run it as a service with systemd (untested)
+### Run it as a service with systemd
 
-**This unit file has not been tested.** Check it on your own machine before you rely on it.
+What has been checked: `systemd-analyze verify` reports nothing for this unit, and it was run under systemd 255 in an Ubuntu 24.04 container with the static binary copied in. There it started as the `netrek` user, created `/var/lib/netrek`, took a client connection, came back 5 seconds after its process was killed, and on `systemctl stop` saved `netrek.database` and exited 0. What has not been checked: a real droplet, starting at boot after a reboot, and waiting for `network-online.target` on a real network.
 
 Save this as `/etc/systemd/system/netrek.service`:
 ```ini
@@ -92,7 +92,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now netrek
 journalctl -u netrek -f
 ```
-Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal.
+Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal, and they arrive late: when its output goes to the journal the server holds printed lines back, so they may only show up when the buffer fills or the server stops. Look in `log.info` and `log.critical` for anything you need straight away.
 
 ### Firewall
 
