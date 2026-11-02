@@ -43,6 +43,14 @@ sudo install -m 755 .build/release/netrek-server-swift /usr/local/bin/netrek-ser
 ```
 The binary is large (about 95 MB) because it includes the Swift runtime. It still uses the system C libraries (glibc, libstdc++), so build it on the same distribution, or an older one, than the machine that runs it.
 
+### Check a build
+
+A smoke test starts the real server on a free port, logs in as a guest the way a classic client does, quits, and stops the server with SIGTERM. It is skipped unless you ask for it:
+```bash
+NETREK_SMOKE_TEST=1 swift test --filter ServerSmokeTests
+```
+To check a release binary instead of the debug one, also set `NETREK_SERVER_BINARY` to its full path. CI runs it on Linux against both.
+
 ### Things to know before you run it
 
 * The server listens on port 2592. By default it listens on `::`, which means every IPv6 address and, on Linux, every IPv4 address too (see below). To choose the address yourself, pass `--listen-address`, for example `--listen-address 0.0.0.0` for IPv4 only.

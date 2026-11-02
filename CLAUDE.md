@@ -20,6 +20,9 @@ swift run netrek-server-swift --domain-name example.com --directory /var/netrek 
 
 # Run tests (minimal test suite)
 swift test
+
+# Smoke test: runs the real server binary and logs in as a guest
+NETREK_SMOKE_TEST=1 swift test --filter ServerSmokeTests
 ```
 
 **CLI Options:**

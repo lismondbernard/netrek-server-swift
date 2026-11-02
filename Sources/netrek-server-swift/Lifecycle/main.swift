@@ -77,7 +77,7 @@ func stopBecauseUnableToListen(on host: String, port: Int, error: Error) -> Neve
 }
 
 let netrekChannel: Channel = {
-    let port = 2592
+    let port = netrekOptions.port
     if let listenAddress = netrekOptions.listenAddress {
         // Given on the command line: use it as is, and stop if it fails.
         do {
