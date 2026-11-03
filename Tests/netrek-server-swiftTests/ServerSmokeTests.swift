@@ -110,6 +110,11 @@ final class ServerSmokeTests: XCTestCase {
         try waitFor("the server to close the connection after CP_BYE", client) { $0.closed }
         XCTAssertNil(client.unframedType, "server sent a packet type NetrekWire cannot frame")
 
+        // The server's output goes to a file, not a terminal, as under systemd. Its
+        // start-up line must be there while it runs, not only once it stops.
+        XCTAssertTrue(output().contains("Server started and listening on"),
+                      "start-up line not written yet: stdout is not line buffered\n\(output())")
+
         // 5. SIGTERM: the server saves the user database and exits 0.
         let database = directory.appendingPathComponent("netrek.database")
         try? FileManager.default.removeItem(at: database)

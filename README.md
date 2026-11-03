@@ -92,7 +92,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now netrek
 journalctl -u netrek -f
 ```
-Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal, and they arrive late: when its output goes to the journal the server holds printed lines back, so they may only show up when the buffer fills or the server stops. Look in `log.info` and `log.critical` for anything you need straight away.
+Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal. The server writes its output a line at a time, so they show up in the journal straight away. For everything else, look in `log.info` and `log.critical`.
 
 ### Firewall
 
