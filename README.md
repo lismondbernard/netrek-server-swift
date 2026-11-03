@@ -58,12 +58,12 @@ To check a release binary instead of the debug one, also set `NETREK_SERVER_BINA
 * IPv4 clients reach the `::` socket as long as `net.ipv6.bindv6only` is 0, which is the Linux default (check with `sysctl net.ipv6.bindv6only`). They then show up in the logs as `::ffff:` addresses. If your system sets it to 1, pass `--listen-address 0.0.0.0` or the server will only take IPv6 clients. This has not been tested on a host with IPv6 yet.
 * `--directory` must be an existing parent. The server creates the directory it is given, but not its parents. The default is `/tmp/netrek`. For a real server use something that survives a reboot, such as `/var/lib/netrek`.
 * The `log.*` files in that directory are deleted and started again every time the server starts.
-* The user database (`netrek.database`) is saved when the server gets SIGTERM or SIGINT (for example `systemctl stop`).
+* The user database (`netrek.database`) and the planets (`netrek.planets`) are saved when the server gets SIGTERM or SIGINT (for example `systemctl stop`). While it runs, the server also saves both once a minute.
 * Bonjour is not available on Linux. The server logs that and carries on.
 
 ### Run it as a service with systemd
 
-What has been checked: `systemd-analyze verify` reports nothing for this unit, and it was run under systemd 255 in an Ubuntu 24.04 container with the static binary copied in. There it started as the `netrek` user, created `/var/lib/netrek`, took a client connection, came back 5 seconds after its process was killed, and on `systemctl stop` saved `netrek.database` and exited 0. What has not been checked: a real droplet, starting at boot after a reboot, and waiting for `network-online.target` on a real network.
+What has been checked: `systemd-analyze verify` reports nothing for this unit, and it was run under systemd 255 in an Ubuntu 24.04 container with the static binary copied in. There it started as the `netrek` user, created `/var/lib/netrek`, took a client connection, came back 5 seconds after its process was killed, and on `systemctl stop` saved `netrek.database` and `netrek.planets` and exited 0. What has not been checked: a real droplet, starting at boot after a reboot, and waiting for `network-online.target` on a real network.
 
 Save this as `/etc/systemd/system/netrek.service`:
 ```ini

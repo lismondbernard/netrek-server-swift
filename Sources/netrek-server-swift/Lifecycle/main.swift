@@ -45,6 +45,9 @@ lifecycle.registerShutdown(label: "shutdownWarning",.sync(universe.shutdownWarni
 //third to last shutdown executed
 lifecycle.registerShutdown(label: "userDatabase", .sync(universe.userDatabase.save))
 
+//the game loop saves the planets once a minute; save them on shutdown too
+lifecycle.registerShutdown(label: "planets", .sync(universe.savePlanets))
+
 //lifecycle.registerShutdown(label: "backtrace",.sync(Backtrace.print))
 Backtrace.install()
 
