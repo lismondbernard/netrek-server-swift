@@ -260,6 +260,9 @@ class Universe {
      */
     
     func savePlanets() {
+        // The game loop and the shutdown hook both call this on the main
+        // thread, so it never runs during a tick. Debug builds check it.
+        assert(Thread.isMainThread, "savePlanets called off the main thread")
         logger.info("saving planet database")
         let encoder = JSONEncoder()
         let directory = netrekOptions.directory
