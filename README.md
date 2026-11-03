@@ -43,17 +43,27 @@ sudo install -m 755 .build/release/netrek-server-swift /usr/local/bin/netrek-ser
 ```
 The binary is large (about 95 MB) because it includes the Swift runtime. It still uses the system C libraries (glibc, libstdc++), so build it on the same distribution, or an older one, than the machine that runs it.
 
+### Check a build
+
+A smoke test starts the real server on a free port, logs in as a guest the way a classic client does, quits, and stops the server with SIGTERM. It is skipped unless you ask for it:
+```bash
+NETREK_SMOKE_TEST=1 swift test --filter ServerSmokeTests
+```
+To check a release binary instead of the debug one, also set `NETREK_SERVER_BINARY` to its full path. CI runs it on Linux against both.
+
 ### Things to know before you run it
 
-* The server listens on `::` (IPv6) port 2592. The host must have IPv6 enabled. On a kernel with IPv6 switched off the server stops at start-up with `SocketAddressError.unknown(host: "::", port: 2592)`. Whether IPv4 clients can use that same socket depends on your system's `net.ipv6.bindv6only` setting (the Linux default is to allow it). That part has not been tested here.
+* The server listens on port 2592. By default it listens on `::`, which means every IPv6 address and, on Linux, every IPv4 address too (see below). To choose the address yourself, pass `--listen-address`, for example `--listen-address 0.0.0.0` for IPv4 only.
+* If the host has no IPv6 (for example a DigitalOcean droplet created without "Enable IPv6"), listening on `::` can fail. When that happens with the default address, the server prints one line saying so and listens on `0.0.0.0` (IPv4 only) instead. An address you pass with `--listen-address` is used as is: if it fails, the server prints why and stops, with no fallback.
+* IPv4 clients reach the `::` socket as long as `net.ipv6.bindv6only` is 0, which is the Linux default (check with `sysctl net.ipv6.bindv6only`). They then show up in the logs as `::ffff:` addresses. If your system sets it to 1, pass `--listen-address 0.0.0.0` or the server will only take IPv6 clients. This has not been tested on a host with IPv6 yet.
 * `--directory` must be an existing parent. The server creates the directory it is given, but not its parents. The default is `/tmp/netrek`. For a real server use something that survives a reboot, such as `/var/lib/netrek`.
 * The `log.*` files in that directory are deleted and started again every time the server starts.
 * The user database (`netrek.database`) is saved when the server gets SIGTERM or SIGINT (for example `systemctl stop`).
 * Bonjour is not available on Linux. The server logs that and carries on.
 
-### Run it as a service with systemd (untested)
+### Run it as a service with systemd
 
-**This unit file has not been tested.** Check it on your own machine before you rely on it.
+What has been checked: `systemd-analyze verify` reports nothing for this unit, and it was run under systemd 255 in an Ubuntu 24.04 container with the static binary copied in. There it started as the `netrek` user, created `/var/lib/netrek`, took a client connection, came back 5 seconds after its process was killed, and on `systemctl stop` saved `netrek.database` and exited 0. What has not been checked: a real droplet, starting at boot after a reboot, and waiting for `network-online.target` on a real network.
 
 Save this as `/etc/systemd/system/netrek.service`:
 ```ini
@@ -82,7 +92,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now netrek
 journalctl -u netrek -f
 ```
-Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal.
+Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal, and they arrive late: when its output goes to the journal the server holds printed lines back, so they may only show up when the buffer fills or the server stops. Look in `log.info` and `log.critical` for anything you need straight away.
 
 ### Firewall
 

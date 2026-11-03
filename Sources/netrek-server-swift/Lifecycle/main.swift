@@ -70,8 +70,36 @@ lifecycle.start { error in
     }
 }
 
-let netrekChannel = try { () -> Channel in
-    return try bootstrap.bind(host: "::", port: 2592).wait()
+/// Stops the server with one clear line when it cannot listen.
+func stopBecauseUnableToListen(on host: String, port: Int, error: Error) -> Never {
+    logger.critical("Unable to listen on \(host) port \(port): \(error). Stopping.")
+    exit(1)
+}
+
+let netrekChannel: Channel = {
+    let port = netrekOptions.port
+    if let listenAddress = netrekOptions.listenAddress {
+        // Given on the command line: use it as is, and stop if it fails.
+        do {
+            return try bootstrap.bind(host: listenAddress, port: port).wait()
+        } catch {
+            stopBecauseUnableToListen(on: listenAddress, port: port, error: error)
+        }
+    }
+    do {
+        return try bootstrap.bind(host: ListenAddress.defaultAddress, port: port).wait()
+    } catch where ListenAddress.isNoIPv6Error(error) {
+        let message = "This host has no IPv6, so listening on \(ListenAddress.defaultAddress) failed (\(error)). Listening on \(ListenAddress.ipv4Fallback) (IPv4 only) instead."
+        logger.warning("\(message)")
+        print(message)
+    } catch {
+        stopBecauseUnableToListen(on: ListenAddress.defaultAddress, port: port, error: error)
+    }
+    do {
+        return try bootstrap.bind(host: ListenAddress.ipv4Fallback, port: port).wait()
+    } catch {
+        stopBecauseUnableToListen(on: ListenAddress.ipv4Fallback, port: port, error: error)
+    }
 }()
 
 guard let localAddress = netrekChannel.localAddress else {

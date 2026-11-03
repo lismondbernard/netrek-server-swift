@@ -24,4 +24,12 @@ struct NetrekOptions: ParsableCommand {
     
     @Flag(help: "Specifies the Netrek Game Style.")
     var gameStyle: GameStyle = .empire
+
+    @Option(help: "The address to listen on, for example 0.0.0.0 or ::. Default: :: (all addresses). If the default fails because this host has no IPv6, the server listens on 0.0.0.0 instead. An address given here is used as is, with no fallback.")
+    var listenAddress: String?
+
+    // Hidden: for the smoke test, which needs a free port. The metaserver report
+    // and Bonjour still say 2592, so do not use it for a real server.
+    @Option(help: .hidden)
+    var port: Int = 2592
 }
