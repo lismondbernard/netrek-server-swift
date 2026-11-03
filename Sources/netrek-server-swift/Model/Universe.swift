@@ -332,6 +332,18 @@ class Universe {
             planet.needsUpdate = false
         }
     }
+    /// True on the ticks where something that classic runs every `tenths`
+    /// tenths of a second should run. Classic counts these "fuses" in 0.1
+    /// second steps whatever the frame rate, and its fuse(X) macro scales
+    /// them by the frame rate (quozl/netrek-server ntserv/daemon.c, line 71
+    /// and lines 377-380, at 43b641f). At 20 updates a second, 5 tenths is
+    /// every 10 ticks. Static so tests can check it without a Universe.
+    static func isFuse(tenths: Int, timerCount: Int, updatesPerSecond: Double) -> Bool {
+        return timerCount % max(1, tenths * Int(updatesPerSecond) / 10) == 0
+    }
+    func isFuse(tenths: Int) -> Bool {
+        return Universe.isFuse(tenths: tenths, timerCount: timerCount, updatesPerSecond: updatesPerSecond)
+    }
     /// True on the ticks where timerFired runs its once per minute actions.
     /// Static so tests can check it without a Universe.
     static func isOncePerMinute(timerCount: Int, updatesPerSecond: Double) -> Bool {
