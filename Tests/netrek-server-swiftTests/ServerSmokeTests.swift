@@ -110,9 +110,16 @@ final class ServerSmokeTests: XCTestCase {
         try waitFor("the server to close the connection after CP_BYE", client) { $0.closed }
         XCTAssertNil(client.unframedType, "server sent a packet type NetrekWire cannot frame")
 
-        // 5. SIGTERM: the server saves the user database and exits 0.
+        // The server's output goes to a file, not a terminal, as under systemd. Its
+        // start-up line must be there while it runs, not only once it stops.
+        XCTAssertTrue(output().contains("Server started and listening on"),
+                      "start-up line not written yet: stdout is not line buffered\n\(output())")
+
+        // 5. SIGTERM: the server saves the user database and the planets, and exits 0.
         let database = directory.appendingPathComponent("netrek.database")
+        let planets = directory.appendingPathComponent("netrek.planets")
         try? FileManager.default.removeItem(at: database)
+        try? FileManager.default.removeItem(at: planets)
         process.terminate()
         let deadline = Date().addingTimeInterval(15)
         while process.isRunning && Date() < deadline { usleep(50_000) }
@@ -120,10 +127,12 @@ final class ServerSmokeTests: XCTestCase {
         guard !process.isRunning else { return }
         XCTAssertEqual(process.terminationReason, .exit, output())
         XCTAssertEqual(process.terminationStatus, 0, output())
-        // Only the user database is saved at shutdown. netrek.planets is saved once
-        // a minute by the game loop, not on SIGTERM, so it is not checked here.
         let saved = try XCTUnwrap(FileManager.default.contents(atPath: database.path), "netrek.database not saved\n\(output())")
         XCTAssertNoThrow(try JSONSerialization.jsonObject(with: saved), "netrek.database is not JSON")
+        // The game loop also saves the planets once a minute, but this test is much
+        // shorter than that, so this file comes from the shutdown save.
+        let savedPlanets = try XCTUnwrap(FileManager.default.contents(atPath: planets.path), "netrek.planets not saved\n\(output())")
+        XCTAssertNoThrow(try JSONSerialization.jsonObject(with: savedPlanets), "netrek.planets is not JSON")
         XCTAssertTrue(output().contains("saving user database"), output())
         XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("log.info").path))
     }

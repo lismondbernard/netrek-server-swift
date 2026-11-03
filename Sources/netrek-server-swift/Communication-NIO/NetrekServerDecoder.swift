@@ -19,7 +19,11 @@ final class NetrekServerDecoder: ByteToMessageDecoder {
     let reserved_size = 16
     let key_size = 32
     let playerMax = 100 // we ignore player updates for more than this
-    
+
+    /// How many whole packets this connection's decoder has taken off the buffer.
+    /// Only read by tests, to see that a packet was decoded.
+    private(set) var decodedPacketCount = 0
+
     
     func printData(_ data: [UInt8], success: Bool) {
         let printPacketDumps = true
@@ -71,8 +75,16 @@ final class NetrekServerDecoder: ByteToMessageDecoder {
             return .needMoreData
         }
         guard let packetLength = PACKET_SIZES[Int(packetType)], packetLength > 0 else {
-            logger.error("Warning: PacketAnalyzer.analyzeOnePacket received invalid packet type \(packetType)")
-            throw NetrekError.invalidPacket
+            // Do what the classic server does (ntserv/socket.c doRead, lines 1006-1011
+            // at quozl/netrek-server 43b641f): log the unknown type, drop the rest of
+            // what was read, and keep the connection open. Throwing here would leave
+            // the connection open but dead, because ByteToMessageHandler refuses all
+            // data after an error. NIO's buffer can hold more than one read, so this
+            // drops everything buffered, which is close to classic.
+            let dropped = buffer.readableBytes
+            buffer.moveReaderIndex(forwardBy: dropped)
+            logger.error("\(context.remoteAddress?.description ?? "unknown address"): unknown packet type: \(packetType), aborting... dropped \(dropped) buffered bytes")
+            return .needMoreData
         }
         guard buffer.readableBytes >= packetLength else {
             return .needMoreData
@@ -81,6 +93,7 @@ final class NetrekServerDecoder: ByteToMessageDecoder {
             logger.error("\(#file) \(#function) Unexpected inability to copy \(packetLength) data")
             throw NetrekError.invalidPacket
         }
+        decodedPacketCount += 1
         let data = Data(bytes)
         switch packetType {
         case 1: // CP_MESSAGE

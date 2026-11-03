@@ -3,7 +3,7 @@ import NIO
 import NIOEmbedded
 @testable import netrek_server_swift
 
-// What happens to a connection after the decoder rejects a packet type.
+// What happens to a connection after the client sends an unknown packet type.
 //
 // main.swift builds each connection's pipeline as
 //     NetrekChannelHandler, then ByteToMessageHandler(NetrekServerDecoder()).
@@ -11,9 +11,12 @@ import NIOEmbedded
 // this pipeline puts a recorder in its place (before the decoder) and another
 // recorder after the decoder. The recorders only note what reaches them.
 //
-// These tests pin down today's behaviour. They do not say it is right.
-// The classic server (ntserv/socket.c doRead) logs an unknown packet type,
-// drops the rest of that read, and keeps the connection open and working.
+// The server does what the classic server does (ntserv/socket.c doRead,
+// lines 1006-1011 at quozl/netrek-server 43b641f): log the unknown type, drop
+// the rest of what was read, and keep the connection open and working.
+//
+// The good packet these tests send is CP_FEATURE, because decoding it does not
+// reach `universe`, which main.swift creates and which does not exist under test.
 final class BadPacketConnectionTests: XCTestCase {
     private final class ErrorRecorder: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
@@ -25,15 +28,18 @@ final class BadPacketConnectionTests: XCTestCase {
     }
 
     private var channel: EmbeddedChannel!
+    private var decoder: NetrekServerDecoder!
     private var beforeDecoder: ErrorRecorder!
     private var afterDecoder: ErrorRecorder!
 
     override func setUpWithError() throws {
         channel = EmbeddedChannel()
+        decoder = NetrekServerDecoder()
         beforeDecoder = ErrorRecorder()
         afterDecoder = ErrorRecorder()
         try channel.pipeline.addHandler(beforeDecoder).wait()
-        try channel.pipeline.addHandler(ByteToMessageHandler(NetrekServerDecoder())).wait()
+        // NetrekServerDecoder is a class, so `decoder` is the one the handler uses.
+        try channel.pipeline.addHandler(ByteToMessageHandler(decoder)).wait()
         try channel.pipeline.addHandler(afterDecoder).wait()
         // EmbeddedChannel starts inactive; connect it so it looks like an accepted client.
         try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 2592)).wait()
@@ -49,43 +55,76 @@ final class BadPacketConnectionTests: XCTestCase {
         return buffer
     }
 
-    /// Sends a bad packet type and returns the error EmbeddedChannel rethrows.
-    private func sendBadPacketType() -> Error? {
-        var thrown: Error?
-        XCTAssertThrowsError(try channel.writeInbound(buffer([255, 0, 0, 0]))) { thrown = $0 }
-        return thrown
+    private let badPacket: [UInt8] = [255, 0, 0, 0]
+
+    /// A whole CP_FEATURE (type 60, 88 bytes).
+    private var feature: [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: 88)
+        bytes[0] = 60
+        XCTAssertEqual(PACKET_SIZES[60], bytes.count)
+        return bytes
     }
 
-    func testDecoderErrorDoesNotReachTheHandlerBeforeIt() {
-        let thrown = sendBadPacketType()
-        XCTAssertEqual(thrown as? NetrekError, .invalidPacket)
-
-        // NetrekChannelHandler.errorCaught sits where beforeDecoder is, so it
-        // never runs and never closes the connection or frees the player slot.
+    func testBadPacketTypeIsNotAnError() {
+        XCTAssertNoThrow(try channel.writeInbound(buffer(badPacket)))
         XCTAssertTrue(beforeDecoder.errors.isEmpty)
-        XCTAssertEqual(afterDecoder.errors.count, 1)
-        XCTAssertEqual(afterDecoder.errors.first as? NetrekError, .invalidPacket)
+        XCTAssertTrue(afterDecoder.errors.isEmpty)
+        XCTAssertEqual(decoder.decodedPacketCount, 0)
     }
 
     func testConnectionStaysOpenAfterBadPacketType() {
-        _ = sendBadPacketType()
+        XCTAssertNoThrow(try channel.writeInbound(buffer(badPacket)))
         XCTAssertTrue(channel.isActive)
     }
 
-    func testLaterBytesAreRejectedWithoutBeingDecoded() {
-        _ = sendBadPacketType()
+    func testGoodPacketInALaterWriteIsDecoded() {
+        XCTAssertNoThrow(try channel.writeInbound(buffer(badPacket)))
+        XCTAssertNoThrow(try channel.writeInbound(buffer(feature)))
+        XCTAssertEqual(decoder.decodedPacketCount, 1)
+        XCTAssertTrue(channel.isActive)
+        XCTAssertTrue(afterDecoder.errors.isEmpty)
+    }
 
-        // One byte of a CP_SPEED. A healthy decoder would wait for the other three.
-        // After the error, ByteToMessageHandler refuses all further data, so the
-        // connection is open but dead: nothing the client sends is decoded again.
-        XCTAssertThrowsError(try channel.writeInbound(buffer([2]))) { error in
-            guard case ByteToMessageDecoderError.dataReceivedInErrorState(let earlier, let refused)? = error as? ByteToMessageDecoderError else {
-                return XCTFail("expected dataReceivedInErrorState, got \(error)")
-            }
-            XCTAssertEqual(earlier as? NetrekError, .invalidPacket)
-            XCTAssertEqual(refused.readableBytesView.map { $0 }, [2])
+    func testBytesAfterTheBadPacketInTheSameWriteAreDropped() {
+        // Classic drops the rest of the read, good packets included.
+        XCTAssertNoThrow(try channel.writeInbound(buffer(badPacket + feature)))
+        XCTAssertEqual(decoder.decodedPacketCount, 0)
+
+        // Nothing was kept: the next CP_FEATURE is framed from its first byte.
+        XCTAssertNoThrow(try channel.writeInbound(buffer(feature)))
+        XCTAssertEqual(decoder.decodedPacketCount, 1)
+        XCTAssertTrue(channel.isActive)
+    }
+
+    func testEveryKindOfUnknownTypeIsDropped() {
+        // 0 is in the table with size 0; 39 is a gap in the table; 61 and 255 are past its end.
+        for (index, type) in [UInt8(0), 39, 61, 255].enumerated() {
+            XCTAssertNil(PACKET_SIZES[Int(type)].flatMap { $0 > 0 ? $0 : nil }, "type \(type)")
+            XCTAssertNoThrow(try channel.writeInbound(buffer([type, 0, 0, 0])), "type \(type)")
+            XCTAssertNoThrow(try channel.writeInbound(buffer(feature)), "type \(type)")
+            XCTAssertEqual(decoder.decodedPacketCount, index + 1, "type \(type)")
         }
         XCTAssertTrue(channel.isActive)
-        XCTAssertTrue(beforeDecoder.errors.isEmpty)
+        XCTAssertTrue(afterDecoder.errors.isEmpty)
+    }
+
+    func testFloodOfBadBytesIsNotKept() throws {
+        // Called directly, the decoder empties the buffer it was given.
+        let context = try channel.pipeline.syncOperations.context(handlerType: ByteToMessageHandler<NetrekServerDecoder>.self)
+        var flood = buffer([UInt8](repeating: 255, count: 64 * 1024))
+        XCTAssertEqual(try decoder.decode(context: context, buffer: &flood), .needMoreData)
+        XCTAssertEqual(flood.readableBytes, 0)
+
+        // Through the channel: many reads of bad bytes, then a CP_FEATURE split over
+        // two reads. If any bad byte had been kept, the CP_FEATURE would be misframed.
+        for _ in 0..<1000 {
+            XCTAssertNoThrow(try channel.writeInbound(buffer([UInt8](repeating: 255, count: 1024))))
+        }
+        let packet = feature
+        XCTAssertNoThrow(try channel.writeInbound(buffer(Array(packet[0..<40]))))
+        XCTAssertEqual(decoder.decodedPacketCount, 0)
+        XCTAssertNoThrow(try channel.writeInbound(buffer(Array(packet[40...]))))
+        XCTAssertEqual(decoder.decodedPacketCount, 1)
+        XCTAssertTrue(channel.isActive)
     }
 }

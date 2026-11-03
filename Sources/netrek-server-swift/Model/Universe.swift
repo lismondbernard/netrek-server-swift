@@ -332,6 +332,11 @@ class Universe {
             planet.needsUpdate = false
         }
     }
+    /// True on the ticks where timerFired runs its once per minute actions.
+    /// Static so tests can check it without a Universe.
+    static func isOncePerMinute(timerCount: Int, updatesPerSecond: Double) -> Bool {
+        return timerCount % (60 * Int(updatesPerSecond)) == 0
+    }
     func timerFired() {
         self.timerCount += 1
         //logger.trace("\(#file) \(#function) count \(self.timerCount)")
@@ -358,7 +363,7 @@ class Universe {
             robotController.secondTimerFired()
         }
         //once per minute actions
-        if timerCount % 60 * Int(self.updatesPerSecond) == 0 {
+        if Universe.isOncePerMinute(timerCount: timerCount, updatesPerSecond: updatesPerSecond) {
             for player in self.players {
                 if player.status != .free {
                     player.minuteTimerFired()

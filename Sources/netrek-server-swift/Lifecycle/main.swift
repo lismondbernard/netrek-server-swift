@@ -12,6 +12,14 @@ import Logging
 import Lifecycle
 import LifecycleNIOCompat
 import Backtrace
+#if canImport(Glibc)
+import Glibc // `stdout` and `setvbuf` on Linux
+#endif
+
+// Write stdout a line at a time. When stdout is not a terminal (under systemd,
+// or piped to a file) it is fully buffered, so the start-up lines would only
+// reach the journal when the server stops.
+setvbuf(stdout, nil, _IOLBF, 0)
 
 print("Initializing server")
 
@@ -36,6 +44,9 @@ lifecycle.registerShutdown(label: "shutdownWarning",.sync(universe.shutdownWarni
 
 //third to last shutdown executed
 lifecycle.registerShutdown(label: "userDatabase", .sync(universe.userDatabase.save))
+
+//the game loop saves the planets once a minute; save them on shutdown too
+lifecycle.registerShutdown(label: "planets", .sync(universe.savePlanets))
 
 //lifecycle.registerShutdown(label: "backtrace",.sync(Backtrace.print))
 Backtrace.install()
