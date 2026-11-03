@@ -136,6 +136,7 @@ class Universe {
     let tModeThreshold = 6
         
     var metaserver: MetaserverUDP? = nil
+    var metaserverSchedule = MetaserverSchedule()
     var bonjourAdvertiser: BonjourAdvertiser?
 
     //https://stackoverflow.com/questions/8304702/how-do-i-create-a-nstimer-on-a-background-thread
@@ -332,6 +333,18 @@ class Universe {
     static func isOncePerMinute(timerCount: Int, updatesPerSecond: Double) -> Bool {
         return timerCount % (60 * Int(updatesPerSecond)) == 0
     }
+    /// Sends the metaserver report if metaserverSchedule says it is time.
+    func reportToMetaserver(now: TimeInterval) {
+        guard let metaserver = self.metaserver, let domainName = netrekOptions.domainName else {
+            return
+        }
+        let report = MetaserverReport(universe: self, domainName: domainName, gameStyle: netrekOptions.gameStyle).text
+        guard metaserverSchedule.check(report, now: now) else {
+            return
+        }
+        logger.debug("metaserver report \(report)")
+        metaserver.send(report: report)
+    }
     func timerFired() {
         self.timerCount += 1
         //logger.trace("\(#file) \(#function) count \(self.timerCount)")
@@ -356,6 +369,9 @@ class Universe {
                 }
             }
             robotController.secondTimerFired()
+            //metaserver report: checked once a second, sent when it changes
+            //(but not within 60 seconds of the last one) or every 15 minutes
+            self.reportToMetaserver(now: ProcessInfo.processInfo.systemUptime)
         }
         //once per minute actions
         if Universe.isOncePerMinute(timerCount: timerCount, updatesPerSecond: updatesPerSecond) {
@@ -368,16 +384,6 @@ class Universe {
         //send a packet every tick
         for player in self.humanPlayers {
             player.flush()
-        }
-        //metaserver update every 3 minutes
-        if timerCount % (180 * Int(self.updatesPerSecond)) == 0 {
-            if let metaserver = self.metaserver, let domainName = netrekOptions.domainName {
-                let report = MetaserverReport(universe: self, domainName: domainName, gameStyle: netrekOptions.gameStyle)
-                logger.debug("metaserver report \(report.text)")
-                metaserver.send(report: report.text)
-            } else {
-                logger.error("Error: unable to send to metaserver")
-            }
         }
         //save planets once per minute
         if timerCount % (60 * Int(self.updatesPerSecond)) == 0 {

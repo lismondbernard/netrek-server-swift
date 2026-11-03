@@ -98,6 +98,7 @@ Replace `example.com` with your server's fully qualified domain name. Leave out 
 
 With `--domain-name` set, the server reports itself to the Netrek metaservers, so classic clients list it. Without it, nothing is sent.
 
+* The first report goes out about a second after start-up. After that the server sends a new one when it changes (a player joins or leaves, or t-mode starts or ends), but never sooner than 60 seconds after the last one, and at least every 15 minutes even if nothing changed. These are vanilla's limits. The metaserver delists a server that reports more often than about once a minute.
 * By default it reports to the three metaservers in vanilla's sample configuration: `metaserver.us.netrek.org`, `metaserver2.us.netrek.org` and `metaserver3.us.netrek.org`, on UDP port 3521.
 * The names are looked up each time a report goes out, not once at start-up, so a metaserver that moves to a new address is still reached. A name that does not resolve is skipped that time. When two names lead to the same address (today the first two do), that address gets one packet, not two, because the metaserver delists a server that reports twice in under 58 seconds.
 * To report somewhere else, give `--metaserver` once per metaserver, as a host name or `name:port`. The first one you give replaces the defaults. For example, to try the report against a listener on your own machine instead of the real metaservers:

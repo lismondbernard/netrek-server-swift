@@ -137,6 +137,41 @@ final class ServerSmokeTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("log.info").path))
     }
 
+    func testServerReportsToTheMetaserverItIsGiven() throws {
+        // The report goes to a listener on 127.0.0.1, never to a real metaserver:
+        // --metaserver replaces the default names.
+        let listener = try UDPListener(group: group)
+        defer { try? listener.close() }
+        let port = try freePort()
+        let process = try startServer(port: port, extraArguments: [
+            "--domain-name", "smoke.example.org", "--metaserver", "127.0.0.1:\(listener.port)",
+        ])
+        server = process
+
+        // The first report goes out about a second after start-up.
+        let first = listener.waitForPackets(count: 1, timeout: 20)
+        XCTAssertEqual(first.count, 1, "no metaserver report\n\(output())")
+        XCTAssertEqual(first.first.map { String(decoding: $0, as: UTF8.self) },
+                       "b\nsmoke.example.org\nE\n2592\n0\n0\n16\nn\nn\nn\nSwift-IPv6-empire\n")
+
+        // A guest joins, which changes the report, but the next one must wait
+        // until 60 seconds after the first.
+        let client = try connect(port: port)
+        try client.send(CP_SOCKET(version: 4, udpVersion: 10, port: UInt32(0).bigEndian))
+        try waitFor("SP_YOU after CP_SOCKET", client) { $0.contains(type: self.SP_YOU) }
+        var login = CP_LOGIN(query: 0)
+        withUnsafeMutableBytes(of: &login.name) { name in
+            for (index, byte) in "guest".utf8.enumerated() { name[index] = byte }
+        }
+        try client.send(login)
+        try waitFor("SP_LOGIN after CP_LOGIN", client) { $0.contains(type: self.SP_LOGIN) }
+        sleep(3)
+        XCTAssertEqual(listener.packets.count, 1, "a second report within 60 seconds of the first")
+
+        process.terminate()
+        process.waitUntilExit()
+    }
+
     // MARK: - Server process
 
     private func serverBinary() -> URL {
@@ -152,7 +187,7 @@ final class ServerSmokeTests: XCTestCase {
         return productsDirectory.appendingPathComponent("netrek-server-swift")
     }
 
-    private func startServer(port: Int) throws -> Process {
+    private func startServer(port: Int, extraArguments: [String] = []) throws -> Process {
         let binary = serverBinary()
         XCTAssertTrue(FileManager.default.isExecutableFile(atPath: binary.path), "no server binary at \(binary.path)")
         _ = FileManager.default.createFile(atPath: outputURL.path, contents: nil)
@@ -160,7 +195,7 @@ final class ServerSmokeTests: XCTestCase {
         let process = Process()
         process.executableURL = binary
         // No --listen-address: this is the default start-up a droplet would use.
-        process.arguments = ["--directory", directory.path, "--port", String(port)]
+        process.arguments = ["--directory", directory.path, "--port", String(port)] + extraArguments
         process.standardOutput = output
         process.standardError = output
         var environment = ProcessInfo.processInfo.environment
