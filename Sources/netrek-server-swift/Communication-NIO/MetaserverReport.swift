@@ -36,6 +36,14 @@ struct MetaserverReport: Equatable {
         }
     }
 
+    /// The server type letter. "E" is not one of vanilla's (its config
+    /// comment lists B/P/C/H, include/solicit.h:36), but it gets through:
+    /// - the metaserver keeps whatever letter it is sent (scan.c:1076), shows
+    ///   it in its listings (disp_new.c:97 and 224) and passes it on to
+    ///   clients in the UDP server list (disp_udp.c:88-95);
+    /// - COW, the classic client, lists "E" servers as "Empire"
+    ///   (quozl/netrek-client-cow parsemeta.c:868-870) and only drops "P"
+    ///   ones (parsemeta.c:434 and 528).
     var typeLetter: String {
         switch gameStyle {
         case .bronco:

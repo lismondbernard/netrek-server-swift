@@ -73,6 +73,18 @@ final class MetaserverReportTests: XCTestCase {
                                tourn: true, isrsa: false, gamefull: true, comment: "Swift-IPv6-bronco"))
     }
 
+    func testTypeLetters() {
+        // Bronco reports "B", as vanilla does (docs/sample_metaservers:23).
+        // Empire reports "E", which the metaserver keeps and COW shows as "Empire".
+        let bronco = MetaserverReport(domainName: "a.example", gameStyle: .bronco, players: 0, tournamentMode: false)
+        let empire = MetaserverReport(domainName: "a.example", gameStyle: .empire, players: 0, tournamentMode: false)
+        XCTAssertEqual(bronco.typeLetter, "B")
+        XCTAssertEqual(empire.typeLetter, "E")
+        // The metaserver reads only the first character of the type line (scan.c:1076).
+        XCTAssertEqual(bronco.fields[2].count, 1)
+        XCTAssertEqual(empire.fields[2].count, 1)
+    }
+
     func testEmptyServer() {
         let report = MetaserverReport(domainName: "netrek.example.org", gameStyle: .empire, players: 0, tournamentMode: false)
         XCTAssertEqual(report.text, "b\nnetrek.example.org\nE\n2592\n0\n0\n16\nn\nn\nn\nSwift-IPv6-empire\n")
