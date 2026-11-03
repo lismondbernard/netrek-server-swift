@@ -94,10 +94,23 @@ journalctl -u netrek -f
 ```
 Replace `example.com` with your server's fully qualified domain name. Leave out `--domain-name` and the server will not report to the metaserver. The game logs go to the `log.*` files in the directory. Only start-up lines and critical errors also reach the journal. The server writes its output a line at a time, so they show up in the journal straight away. For everything else, look in `log.info` and `log.critical`.
 
+### The metaserver report
+
+With `--domain-name` set, the server reports itself to the Netrek metaservers, so classic clients list it. Without it, nothing is sent.
+
+* By default it reports to the three metaservers in vanilla's sample configuration: `metaserver.us.netrek.org`, `metaserver2.us.netrek.org` and `metaserver3.us.netrek.org`, on UDP port 3521.
+* The names are looked up each time a report goes out, not once at start-up, so a metaserver that moves to a new address is still reached. A name that does not resolve is skipped that time. When two names lead to the same address (today the first two do), that address gets one packet, not two, because the metaserver delists a server that reports twice in under 58 seconds.
+* To report somewhere else, give `--metaserver` once per metaserver, as a host name or `name:port`. The first one you give replaces the defaults. For example, to try the report against a listener on your own machine instead of the real metaservers:
+```bash
+nc -ul 3521   # in another terminal
+netrek-server-swift --domain-name netrek.example.org --metaserver 127.0.0.1
+```
+* Before listing a new server on the public metaservers, tell the other server owners (see vanilla's `docs/metaservers-HowTo`).
+
 ### Firewall
 
 * **TCP 2592 inbound.** Players connect here. Allow it from anywhere you want players to come from.
-* **UDP outbound.** With `--domain-name` set, the server sends its status report to `metaserver1.netrek.org` on UDP port 3521. Most firewalls allow outbound traffic already. If yours blocks it, open that one port. Nothing needs to come back in.
+* **UDP outbound.** With `--domain-name` set, the server sends its status report to the metaservers on UDP port 3521 (see below). Most firewalls allow outbound traffic already. If yours blocks it, open that one port. Nothing needs to come back in.
 
 For example, with `ufw` (these commands have not been tested here):
 ```bash
