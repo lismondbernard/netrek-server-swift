@@ -62,18 +62,18 @@ final class NetrekServerDecoderTests: XCTestCase {
         XCTAssertEqual(index, bytes.count)
     }
 
-    func testUnknownPacketTypeIsRejected() {
+    func testUnknownPacketTypeIsDropped() {
+        // Like the classic server, an unknown type is logged and dropped, not an error.
+        // BadPacketConnectionTests covers what happens to the connection after it.
         XCTAssertNil(PACKET_SIZES[255])
-        XCTAssertThrowsError(try channel.writeInbound(buffer([255, 0, 0, 0]))) { error in
-            XCTAssertEqual(error as? NetrekError, NetrekError.invalidPacket)
-        }
+        XCTAssertNoThrow(try channel.writeInbound(buffer([255, 0, 0, 0])))
+        XCTAssertNil(try channel.readInbound(as: ByteBuffer.self))
     }
 
-    func testNullPacketTypeIsRejected() {
-        // Type 0 is listed with size 0, which the decoder treats as invalid.
-        XCTAssertThrowsError(try channel.writeInbound(buffer([0, 0, 0, 0]))) { error in
-            XCTAssertEqual(error as? NetrekError, NetrekError.invalidPacket)
-        }
+    func testNullPacketTypeIsDropped() {
+        // Type 0 is listed with size 0, which the decoder treats as unknown.
+        XCTAssertNoThrow(try channel.writeInbound(buffer([0, 0, 0, 0])))
+        XCTAssertNil(try channel.readInbound(as: ByteBuffer.self))
     }
 
     func testTruncatedPacketWaitsForMoreData() throws {
