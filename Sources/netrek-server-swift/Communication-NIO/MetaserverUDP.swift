@@ -155,66 +155,6 @@ class MetaserverUDP {
         }
         return nil
     }
-
-    /// The report for this universe, sent by the game loop.
-    func makeReport(universe: Universe) -> String {
-        guard let domainName = netrekOptions.domainName else { return "" }
-        var returnValue = ""
-        returnValue += "b\n"  // version
-        returnValue += "\(domainName)\n" //netrek server DNS name
-        switch netrekOptions.gameStyle {
-        case .bronco:
-            returnValue += "B\n"  // type
-        case .empire:
-            returnValue += "E\n"  // type
-        }
-        returnValue += "2592\n" // netrek server port
-        returnValue += "0\n"
-        let playerCount = universe.players.filter({$0.status != .free && $0.robot == nil}).count
-        returnValue += "\(playerCount)\n"
-        let freeCount = max(16 - playerCount,0)
-        returnValue += "\(freeCount)\n"
-        let tMode: String
-        switch universe.gameState {
-        case .intramural:
-            tMode = "n"
-        case .tmode:
-            tMode = "y"
-        }
-        returnValue += "\(tMode)\n"
-        returnValue += "n\n" //RSA
-        if playerCount >= 16 {
-            returnValue += "y\n" //gamefull
-        } else {
-            returnValue += "n\n" // gamefull
-        }
-        switch netrekOptions.gameStyle {
-        case .bronco:
-            returnValue += "Swift-IPv6-bronco\n" // comment
-        case .empire:
-            returnValue += "Swift-IPv6\n-empire" // comment
-        }
-
-        /* The detailed user list was not picked up by the metaserver successfully.  Rather than debug I chose not to share this information
-
-        for player in universe.players.filter({$0.status != .free}) {
-            returnValue += "\(player.slot.hex)\n"
-            returnValue += "\(player.team.letter)\n"
-            returnValue += "\(player.ship.rawValue)\n"
-            if let user = player.user {
-                returnValue += "\(user.rank.value)\n"
-                returnValue += "\(user.name)\n"
-                returnValue += "\(user.userinfo)\n"
-            } else {
-                returnValue += "0\n"
-                returnValue += "unknownName\n"
-                returnValue += "unknownInfo\n"
-            }
-            returnValue += "redacted\n" // user host
-        }*/
-        logger.debug("metaserver report \(returnValue)")
-        return returnValue
-    }
 }
 
 /*private final class MetaSender: ChannelOutboundHandler {

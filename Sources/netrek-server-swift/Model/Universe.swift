@@ -371,8 +371,10 @@ class Universe {
         }
         //metaserver update every 3 minutes
         if timerCount % (180 * Int(self.updatesPerSecond)) == 0 {
-            if let metaserver = self.metaserver {
-                metaserver.send(report: metaserver.makeReport(universe: self))
+            if let metaserver = self.metaserver, let domainName = netrekOptions.domainName {
+                let report = MetaserverReport(universe: self, domainName: domainName, gameStyle: netrekOptions.gameStyle)
+                logger.debug("metaserver report \(report.text)")
+                metaserver.send(report: report.text)
             } else {
                 logger.error("Error: unable to send to metaserver")
             }
