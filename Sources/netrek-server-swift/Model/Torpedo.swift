@@ -183,7 +183,11 @@ class Torpedo: Thing {
                 logger.trace("Torp expired")
                 self.state = .free
             }
-            self.wobble()
+            // Classic wobbles a torpedo once every 0.1 s, not every frame
+            // (ntserv/daemon.c lines 2184-2188 at 43b641f).
+            if universe.isFuse(tenths: 1) {
+                self.wobble()
+            }
             self.updatePosition()
             if self.checkForHit() {
                 self.explode()

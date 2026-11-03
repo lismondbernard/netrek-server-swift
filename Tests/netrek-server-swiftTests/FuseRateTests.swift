@@ -48,6 +48,14 @@ final class FuseRateTests: XCTestCase {
         XCTAssertEqual(calls(tenths: 1, seconds: 1, updatesPerSecond: 20), 10)
     }
 
+    /// Torpedo wobble (Torpedo.shortTimerFired) runs on a 1 tenth fuse too,
+    /// as classic wobbles torpedoes only on 0.1 s boundaries
+    /// (ntserv/daemon.c lines 2184-2188).
+    func testTorpedoesWobbleTenTimesASecond() {
+        let ticks = (1...20).filter { Universe.isFuse(tenths: 1, timerCount: $0, updatesPerSecond: 20) }
+        XCTAssertEqual(ticks, [2, 4, 6, 8, 10, 12, 14, 16, 18, 20])
+    }
+
     func testFusesFollowTheUpdateRate() {
         XCTAssertEqual(calls(tenths: Player.planetFightFuse, seconds: 10, updatesPerSecond: 10), 20)
         XCTAssertEqual(calls(tenths: Player.beamFuse, seconds: 10, updatesPerSecond: 10), 12)
