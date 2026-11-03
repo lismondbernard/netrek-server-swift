@@ -41,6 +41,13 @@ final class FuseRateTests: XCTestCase {
         XCTAssertEqual(ticks.count, 13)
     }
 
+    /// Plasma tracking (Plasma.updatePosition) runs on a 1 tenth fuse, as
+    /// classic turns plasmas only on 0.1 s boundaries (ntserv/daemon.c lines
+    /// 2173-2175): every other tick here, 10 times a second.
+    func testPlasmaTracksTenTimesASecond() {
+        XCTAssertEqual(calls(tenths: 1, seconds: 1, updatesPerSecond: 20), 10)
+    }
+
     func testFusesFollowTheUpdateRate() {
         XCTAssertEqual(calls(tenths: Player.planetFightFuse, seconds: 10, updatesPerSecond: 10), 20)
         XCTAssertEqual(calls(tenths: Player.beamFuse, seconds: 10, updatesPerSecond: 10), 12)
