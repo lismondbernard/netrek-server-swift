@@ -28,7 +28,11 @@ let netrekOptions = NetrekOptions.parseOrExit()
 LoggingSystem.bootstrap(NetrekLogHandler.init)
 // `logger` is declared in Globals.swift. It is created on first use, which is the line below.
 
-let lifecycleConfiguration = ServiceLifecycle.Configuration(logger: logger)
+// Run the shutdown hooks on the main queue. The game loop runs on the main
+// run loop, which also runs the main queue, so a hook (saving the planets or
+// the user database, or warning the players) runs between two ticks, never
+// during one. ServiceLifecycle's default is a global queue, another thread.
+let lifecycleConfiguration = ServiceLifecycle.Configuration(logger: logger, callbackQueue: .main)
 
 let lifecycle = ServiceLifecycle(configuration: lifecycleConfiguration)
 

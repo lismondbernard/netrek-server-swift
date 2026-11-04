@@ -32,4 +32,18 @@ struct NetrekOptions: ParsableCommand {
     // and Bonjour still say 2592, so do not use it for a real server.
     @Option(help: .hidden)
     var port: Int = 2592
+
+    @Option(name: .customLong("metaserver"), help: ArgumentHelp("A metaserver to report to, as a host name or name:port (port 3521 if left out). Give it more than once for more than one; the first one given replaces the defaults. Only used with --domain-name. Default: \(MetaserverHost.defaultNames.joined(separator: ", ")).", valueName: "host"))
+    var metaservers: [String] = MetaserverHost.defaultNames
+
+    /// The --metaserver values, read.
+    var metaserverHosts: [MetaserverHost] {
+        return metaservers.compactMap(MetaserverHost.init(argument:))
+    }
+
+    func validate() throws {
+        for value in metaservers where MetaserverHost(argument: value) == nil {
+            throw ValidationError("--metaserver \(value): give a host name, or name:port with a port from 1 to 65535.")
+        }
+    }
 }
