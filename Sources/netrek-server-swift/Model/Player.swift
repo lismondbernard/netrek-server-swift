@@ -16,6 +16,13 @@ class Player: Thing {
     static let planetRange = 1500.0 //range at which planet can attack player
     static let tractorCost = 200 // cost per second
     static let tractorHeat = 50.0 // heat per second
+    /// Classic's PLFIGHTFUSE, in tenths of a second: bombing and planets
+    /// firing at ships, which classic's plfight() does together
+    /// (ntserv/daemon.c line 388 at 43b641f).
+    static let planetFightFuse = 5
+    /// Classic's BEAMFUSE, in tenths of a second: army beaming
+    /// (ntserv/daemon.c line 390 at 43b641f).
+    static let beamFuse = 8
     var slot: Int {
         didSet {
             self.needSpPlayerInfo = true
@@ -1794,15 +1801,15 @@ class Player: Thing {
         
         if self.status == .alive {
             //every half second
-            if universe.timerCount % 5 == 0 && self.orbit != nil && self.bomb {
+            if universe.isFuse(tenths: Player.planetFightFuse) && self.orbit != nil && self.bomb {
                 self.bombTick()
             }
-            if universe.timerCount % 5 == 0 {
+            if universe.isFuse(tenths: Player.planetFightFuse) {
                 self.planetAttack()
             }
             
             //army beaming every 0.8 seconds
-            if universe.timerCount % 8 == 0 && self.transporter != .off {
+            if universe.isFuse(tenths: Player.beamFuse) && self.transporter != .off {
                 self.beam()
             }
             self.wtmp -= self.ship.weaponCoolRate / Int(universe.updatesPerSecond)

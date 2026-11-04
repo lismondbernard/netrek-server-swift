@@ -164,7 +164,11 @@ class Plasma: Thing {
     }
     
     func updatePosition() {
-        self.updateDirection()
+        // Classic turns a plasma toward its target once every 0.1 s, not
+        // every frame (ntserv/daemon.c lines 2173-2175 at 43b641f).
+        if universe.isFuse(tenths: 1) {
+            self.updateDirection()
+        }
         self.positionX += self.speed * Globals.WARP1 * cos(self.direction) / universe.updatesPerSecond
         self.positionY -= self.speed * Globals.WARP1 * sin(self.direction) / universe.updatesPerSecond
         if self.state == .alive {
