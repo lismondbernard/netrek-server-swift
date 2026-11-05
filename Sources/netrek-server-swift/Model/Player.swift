@@ -86,27 +86,29 @@ class Player: Thing {
             }
         }
     }
+    /// Engine and weapon heat. They lock the engines or weapons through
+    /// `coolAndCheckOverheat()` every 0.1 s, as classic does, not when set.
+    /// Before, a lock came at exactly 1000 and lasted until the heat was
+    /// back to 0, up to 50 s (SSS-304).
     var etmp = 0.0 {
         didSet {
-            if etmp >= 1000 {
-                self.enginesOverheated = true
-            }
-            if etmp <= 0 {
-                self.enginesOverheated = false
-                self.etmp = 0
-            }
+            if etmp < 0 { self.etmp = 0 }
         }
     }
     var wtmp = 0 {
         didSet {
-            if wtmp >= 1000 {
-                self.weaponsOverheated = true
-            }
-            if wtmp <= 0 {
-                self.weaponsOverheated = false
-                self.wtmp = 0
-            }
+            if wtmp < 0 { self.wtmp = 0 }
         }
+    }
+    private var weaponLock = OverheatLock()
+    private var engineLock = OverheatLock()
+    /// The random rolls of overheating. Tests may replace it.
+    static var overheatRoll: (Range<Int>) -> Int = { Int.random(in: $0) }
+    /// Weapon cooling each 0.1 s. Every classic rate is a whole number per
+    /// 0.1 s. Before, cooling ran each tick as rate / 20 in whole numbers,
+    /// so the scout's and battleship's 30 a second came out as 20 (SSS-305).
+    static func weaponCoolingPerTenth(_ ship: ShipType) -> Int {
+        ship.weaponCoolRate / 10
     }
     var whydead: WhyDead = .none
     var whodead = 0
@@ -136,7 +138,8 @@ class Player: Thing {
     var enginesOverheated = false {
         didSet {
             if enginesOverheated && !oldValue {
-                self.helmSpeed = 1
+                // Classic sets the desired speed to 0 (`daemon.c`).
+                self.helmSpeed = 0
                 self.sendMessage(message: "Engines overheated!")
             }
         }
@@ -555,6 +558,8 @@ class Player: Thing {
         self.bomb = false
         self.weaponsOverheated = false
         self.enginesOverheated = false
+        self.weaponLock = OverheatLock()
+        self.engineLock = OverheatLock()
         self.tractorMode = .off
         self.orbit = nil
         self.cloak = false
@@ -1796,6 +1801,16 @@ class Player: Thing {
             }
         }
     }
+    /// Classic's cooling and overheat lock, every 0.1 s. Heat cools by the
+    /// ship's rate, also while locked (see `OverheatLock`).
+    func coolAndCheckOverheat() {
+        self.wtmp -= Player.weaponCoolingPerTenth(self.ship)
+        self.weaponsOverheated = weaponLock.step(heat: Double(self.wtmp), limit: self.ship.maxWeaponTemp,
+                                                 roll: Player.overheatRoll)
+        self.etmp -= self.ship.engineCoolRate / 10
+        self.enginesOverheated = engineLock.step(heat: self.etmp, limit: self.ship.maxEngineTemp,
+                                                 roll: Player.overheatRoll)
+    }
     func shortTimerFired() {
         //executed FPS times per second
         
@@ -1812,8 +1827,9 @@ class Player: Thing {
             if universe.isFuse(tenths: Player.beamFuse) && self.transporter != .off {
                 self.beam()
             }
-            self.wtmp -= self.ship.weaponCoolRate / Int(universe.updatesPerSecond)
-            self.etmp -= self.ship.engineCoolRate / universe.updatesPerSecond
+            if universe.isFuse(tenths: 1) {
+                self.coolAndCheckOverheat()
+            }
             self.updateRepair()
             self.updateFuel()
             self.updateSpeed()

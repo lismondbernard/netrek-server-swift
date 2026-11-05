@@ -207,6 +207,16 @@ enum ShipType: Int, CaseIterable {
             return 40
         }
     }
+    /// Weapon heat over this can lock the weapons. Classic `getship.c`:
+    /// 1000 for every ship except the starbase, 1300 (outside chaos mode).
+    var maxWeaponTemp: Int {
+        self == .starbase ? 1300 : 1000
+    }
+    /// Engine heat over this can lock the engines: 1000, except the
+    /// assault ship's 1200 (classic `getship.c`).
+    var maxEngineTemp: Int {
+        self == .assault ? 1200 : 1000
+    }
     var engineCoolRate: Double { // per second
         switch self {
         case .scout:
